@@ -93,13 +93,11 @@ main() {
 	log_info "stopping node2's daemon (member goes offline mid-session; left stopped for the rest of this test)"
 	vm_run "$TESTSUITE_PHYSICAL_HOST" "$RUN_ID" node2 "sudo systemctl stop tetron" || fatal "coordinator-reconnect: could not stop tetron on node2"
 
-	# The redial task's connect attempt has no explicit per-call timeout
-	# (matching the member-side reconnect loop's own behavior, unaffected
-	# by CONVERGE-012 -- neither wraps transport::connect_to_peer_with_alpn
-	# in tokio::time::timeout, relying on iroh's own internal handshake
-	# timeout instead), so a first attempt against a now-silent peer can
-	# take tens of seconds to actually resolve to an error. 60s covers the
-	# 1s initial backoff wait plus that internal timeout with margin.
+	# The redial task's connect attempt is now bounded by RECONNECT_DIAL_TIMEOUT
+	# (PER-DIAL-TIMEOUT-001, 10s, the same wrap dial_all_members uses), so a
+	# first attempt against a now-silent peer resolves within ~10s instead of
+	# pending on iroh's full internal handshake timeout. 60s still covers the
+	# backoff waits plus a couple of bounded attempts with margin.
 	log_info "waiting for node1 to notice the disconnect, run cleanup, and attempt at least one redial (60s)"
 	sleep 60
 
@@ -112,13 +110,20 @@ main() {
 	fi
 	log_pass "coordinator-reconnect: node1 ran its existing dead-peer cleanup ($cleanup_count line(s))"
 
+	# A bounded dial to an offline member resolves either as a connect error
+	# ("coordinator reconnect attempt failed") or, if it does not resolve within
+	# RECONNECT_DIAL_TIMEOUT, as a timeout ("coordinator reconnect dial timed
+	# out", PER-DIAL-TIMEOUT-001). Either line proves the coordinator attempted
+	# an outbound redial on its own initiative, which is what CONVERGE-012 is
+	# about; which one appears depends on how fast iroh gives up on the now-silent
+	# peer, so accept both rather than asserting on one.
 	local attempt_count
-	attempt_count="$(vm_run "$TESTSUITE_PHYSICAL_HOST" "$RUN_ID" node1 "sudo grep -c 'coordinator reconnect attempt failed' /var/log/tetron/tetron.log.* 2>/dev/null || true")"
+	attempt_count="$(vm_run "$TESTSUITE_PHYSICAL_HOST" "$RUN_ID" node1 "sudo grep -cE 'coordinator reconnect attempt failed|coordinator reconnect dial timed out' /var/log/tetron/tetron.log.* 2>/dev/null || true")"
 	attempt_count="${attempt_count:-0}"
 	if [[ "$attempt_count" == "0" ]]; then
 		log_info "coordinator-reconnect: diagnostic dump -- reconnect/coordinator lines:"
 		vm_run "$TESTSUITE_PHYSICAL_HOST" "$RUN_ID" node1 "sudo grep -iE 'reconnect|coordinator' /var/log/tetron/tetron.log.* 2>/dev/null" >&2
-		log_fail "coordinator-reconnect: expected node1 (coordinator) to log at least one 'coordinator reconnect attempt failed' against the offline member -- CONVERGE-012's redial task did not run"
+		log_fail "coordinator-reconnect: expected node1 (coordinator) to log at least one outbound redial attempt (failed or timed out) against the offline member -- CONVERGE-012's redial task did not run"
 		exit 1
 	fi
 	log_pass "coordinator-reconnect: node1 (coordinator) attempted $attempt_count outbound redial(s) against the offline member on its own initiative -- CONVERGE-012 is live"
