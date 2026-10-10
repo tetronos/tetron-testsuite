@@ -20,3 +20,4 @@ idle-connection-stability-relay
 coordinator-reconnect
 oversized-udp-fragmentation
 reconnect-storm
+presence-gated-redial
