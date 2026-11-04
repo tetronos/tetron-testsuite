@@ -9,6 +9,7 @@
 
 regression
 core-smoke
+join-invite-input
 #install-path-override
 #rsync-transfer
 #scp-transfer
