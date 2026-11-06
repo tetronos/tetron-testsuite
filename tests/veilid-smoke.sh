@@ -141,7 +141,7 @@ install_tetron_veilid_on() {
 
 	remote_exec_b64 "$node" "
 		set -e
-		api_url='https://api.github.com/repos/ErikAllanKincaid/tetron-veilid/releases/latest'
+		api_url='https://api.github.com/repos/tetronos/tetron-veilid/releases/latest'
 		release_json=\$(curl -fsSL \"\$api_url\")
 		asset_url=\$(echo \"\$release_json\" | grep -o '\"browser_download_url\": *\"[^\"]*tetron-veilid-server-linux-${arch}-[^\"]*\\.tar\\.gz\"' | head -n1 | sed 's/.*\"\\(https[^\"]*\\)\"/\\1/')
 		[ -n \"\$asset_url\" ] || { echo 'no matching tetron-veilid release asset found for linux-${arch}' >&2; exit 1; }

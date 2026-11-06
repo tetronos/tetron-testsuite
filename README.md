@@ -1,6 +1,6 @@
 # tetron-testsuite
 
-An automated VM testing suite for [tetron](https://github.com/ErikAllanKincaid/tetron), a P2P mesh VPN. It provisions disposable VM topologies, installs a tetron build on each, drives tetron entirely through its own CLI/`--json` output -- a black-box approach, exercising tetron the same way a person testing it by hand would, not by reaching into its internals -- and asserts on real network behavior.
+An automated VM testing suite for [tetron](https://github.com/tetronos/tetron), a P2P mesh VPN. It provisions disposable VM topologies, installs a tetron build on each, drives tetron entirely through its own CLI/`--json` output -- a black-box approach, exercising tetron the same way a person testing it by hand would, not by reaching into its internals -- and asserts on real network behavior.
 
 **Optional and separate from tetron on purpose**, same relationship tetron-webui and tetron-systray have to core: a genuinely separate, opt-in addon. Nothing about tetron's own behavior changes whether this exists or not. This addon tests whatever tetron binary you point it at; it does not carry a wire-compatibility relationship with one specific core version, so it versions independently rather than mirroring tetron's own minor version.
 
